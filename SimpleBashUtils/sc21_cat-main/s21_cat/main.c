@@ -69,7 +69,10 @@ void CatFile(FILE *file, Flags flags, const char *table[static 256]) {
                     printf("%6i  ", ++lineno);
             }
         }
-        printf("%s", table[c]);
+        if (!*table[c])
+            printf("\0");
+        else
+            printf("%s", table[c]);
         last = c;
     }
 }
@@ -167,8 +170,8 @@ int main(int argc, char *argv[]) {
     Flags flags = CatReadFlags(argc, argv);
     const char *table[256];
     CatSetTable(table);
-    if (flags.numberNonBlank)
-        printf("number non blank \n");
+    // if (flags.numberNonBlank)        done in CatFile
+    //     printf("number non blank \n");
     if (flags.markEndl)
         CatSetEndl(table);
     // if (flags.numberAll)         done in CatFile
@@ -180,6 +183,8 @@ int main(int argc, char *argv[]) {
     if (flags.printNonPrintable)
         CatSetNonPrintable(table);
     
-    CatFile(stdin, flags, table);
+    // CatFile(stdin, flags, table);
+    
+    Cat(argc, argv, flags, table);
 
 }
