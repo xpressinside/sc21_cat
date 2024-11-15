@@ -34,7 +34,6 @@ Flags CatReadFlags(int argc,char *argv[]){
             flags.numberNonBlank = true;
             break; case 'e':
             flags.markEndl = true;
-            case 'v':
             flags.printNonPrintable = true;
             break; case 'E':
             flags.markEndl = true;
@@ -43,8 +42,9 @@ Flags CatReadFlags(int argc,char *argv[]){
             break; case 's':
             flags.squeeze = true;
             break; case 't':
+            flags.tab = true;
             flags.printNonPrintable = true;
-            case 'T':
+            break; case 'T':
             flags.tab = true;
         }
     }
@@ -54,23 +54,28 @@ Flags CatReadFlags(int argc,char *argv[]){
 void CatFile(FILE *file, Flags flags, const char *table[static 256]) {
     int c = 0;
     int last;
+    bool squeeze = false;
     int lineno = 0;
     last = '\n';
     (void)flags;
     while (fread(&c, 1, 1, file) > 0) {
         if (last == '\n') {
-            if (flags.squeeze && c == '\n')
-                continue;
-            if (flags.numberAll) {
-                printf("%6i  ", ++lineno);
+            if (flags.squeeze && c == '\n'){
+                if (squeeze)
+                    continue;
+                squeeze = true;
             }
-            else if (flags.numberNonBlank) {
+            else
+                squeeze = false;    
+            if (flags.numberNonBlank) {
                 if (c != '\n')
-                    printf("%6i  ", ++lineno);
+                    printf("%6i\t", ++lineno);
+            } else if (flags.numberAll) {
+                printf("%6i\t", ++lineno);
             }
         }
         if (!*table[c])
-            printf("\0");
+            printf("%c", '\0');
         else
             printf("%s", table[c]);
         last = c;
