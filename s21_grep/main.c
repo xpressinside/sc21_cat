@@ -7,59 +7,81 @@
 #include <errno.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <limits.h>
 
-// int getopt_long(int argcm ,char *const argv[],
-//                 const char *optstring,
-//                 const struct option *longopts, int *longindex);
 
 typedef struct {
+    int regex_flag; // flag e,i
+    bool invert;
+    bool count;
+    bool filesMatch;
+    bool numberLine;
+
 }Flags;
 
 
-#if 0
-Flags CatReadFlags(int argc,char *argv[]){
-    struct option longOptions[] = {{"number-nonblank", 0, NULL, 'b'},{"number", 0, NULL, 'n'},{"squeeze-blank", 0, NULL, 's'},{NULL, 0, NULL, 0}};
-
-    int currentFlag = getopt_long(argc, argv, "bevEnstT", longOptions, NULL);
-
-    Flags flags = {false, false, false, false, false, false};
-
-    for (;currentFlag != -1; currentFlag = getopt_long(argc, argv, "bevEnstT", longOptions, NULL)) {
+Flags GrepReadFlags(int argc,char *argv[]){
+    Flags flags = {0, false, false, false, false};
+    int currentFlag = getopt(argc, argv, "eivcln");
+    for (;currentFlag != -1
+         ;currentFlag = getopt(argc, argv, "eivcln")) {
         switch (currentFlag)
         {
-            break; case 'b':
-            flags.numberNonBlank = true;
             break; case 'e':
-            flags.markEndl = true;
-            flags.printNonPrintable = true;
-            break; case 'E':
-            flags.markEndl = true;
+                flags.regex_flag |= REG_EXTENDED;      //логическое или
+            break; case 'i':
+                flags.regex_flag |= REG_ICASE;      //логическое или
+            break; case 'v':
+                flags.invert = true;
+            break; case 'c':
+                flags.count = true;
+            break; case 'l':
+                flags.filesMatch = true;
             break; case 'n':
-            flags.numberAll = true;
-            break; case 's':
-            flags.squeeze = true;
-            break; case 't':
-            flags.tab = true;
-            flags.printNonPrintable = true;
-            break; case 'T':
-            flags.tab = true;
+                flags.numberLine = true;           
+
         }
     }
     return flags;
 }
-#endif
+
+void GrepCount(FILE *file, const char *filename, Flags flags, regex_t *preg) {
+    (void)flags;
+    (void)filename;
+    char *line = 0;
+    size_t length = 0;
+    regmatch_t match;
+    int count = 0;
+    while (getline(&line, &length, file) > 0) {
+        if (!regexec(preg, line, 1, &match, 0)){
+            ++count;
+        }
+    }
+    printf("%i\n", count);
+    free(line);
+}
+
 
 void GrepFile(FILE *file, Flags flags, regex_t *preg) {
+    (void)flags;
     char *line = 0;
     size_t length = 0;
     regmatch_t match;
     while (getline(&line, &length, file) > 0) {
-        if (!regexec(preg, line, 1, &match, 0)){
-            printf("%s", line);
+        if (flags.invert) {                                         // invert
+            if (regexec(preg, line, 1, &match, 0)){
+                printf("%s", line);
+            }
         }
+        else
+        {
+            if (!regexec(preg, line, 1, &match, 0)){
+                printf("%s", line);
+            }
+        }
+
     }
     free(line);
-
 }
 
 void Grep(int argc, char *argv[], Flags flags) {
@@ -73,7 +95,7 @@ void Grep(int argc, char *argv[], Flags flags) {
         fprintf(stderr, "no pattern\n");
         exit(1);
     }
-    if (regcomp(preg, *pattern, 0)) {
+    if (regcomp(preg, *pattern, flags.regex_flag)) {
         fprintf(stderr, "failed to compile regex\n");
         exit(1);
     }
@@ -86,7 +108,13 @@ void Grep(int argc, char *argv[], Flags flags) {
             perror(*filename);
             continue;
         }
-        GrepFile(file,flags,preg);
+        if (flags.count) {
+            GrepCount(file, *filename, flags, preg);
+        }
+        else {
+            GrepFile(file, flags, preg);
+
+        }
         fclose(file);
     }
 }
@@ -168,7 +196,7 @@ void CatSetNonPrintable(const char *table[static 256]) {
 #endif
 
 int main(int argc, char *argv[]) {
-    Flags flags = {};
+    Flags flags = GrepReadFlags;
     Grep(argc, argv, flags);
 
 }
