@@ -53,7 +53,7 @@ void GrepFile(FILE *file, Flags flags, regex_t *preg) {
     char *line = 0;
     size_t length = 0;
     regmatch_t match;
-    while (getline(&line, &length, file)) {
+    while (getline(&line, &length, file) > 0) {
         if (!regexec(preg, line, 1, &match, 0)){
             printf("%s", line);
         }
@@ -73,7 +73,7 @@ void Grep(int argc, char *argv[], Flags flags) {
         fprintf(stderr, "no pattern\n");
         exit(1);
     }
-    if (!regcomp(preg, *pattern, 0)) {
+    if (regcomp(preg, *pattern, 0)) {
         fprintf(stderr, "failed to compile regex\n");
         exit(1);
     }
