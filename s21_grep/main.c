@@ -11,7 +11,7 @@
 
 typedef struct {
     char *pattern;
-    // size_t pattern_size;
+    size_t size;
     int regex_flag; // flag e,i
     bool invert;
     bool count;
@@ -38,24 +38,36 @@ void *xrealloc(void *block, size_t size) {
     return temp;
 }
 
+char *string_append_expr(char *string, size_t *size,const char *expr, size_t size_expr) {
+
+    string = xrealloc(string, *size + size_expr + 7); //+2 kruglie skobochki i null termintaor
+    string[*size] = '\\';
+    string[*size + 1] = '|';
+    string[*size + 2] = '\\';
+    string[*size + 3] = '(';
+    memcpy(string + *size + 4, expr, size_expr);
+    *size += size_expr + 4;
+    string[*size] = '\\';
+    string[*size + 1] = ')';
+    string[*size + 2] = '\0';
+    *size += 2;
+    return string;
+}
+
 Flags GrepReadFlags(int argc,char *argv[]){
-    Flags flags = {0, false, false, false, false, false};
-    int currentFlag = getopt(argc, argv, "eivclno");
-    flags.pattern = xmalloc(3);
-    flags.pattern[0] = '[';
-    flags.pattern[1] = '\0';
-    size_t pattern_size = 1;
-    size_t temp_size = 0;
+    Flags flags = {NULL, 0, 0, false, false, false, false, false};
+    int currentFlag = getopt_long(argc, argv, "e:ivclno", 0, 0);
+    flags.pattern = xmalloc(2);
+    flags.pattern[0] = '\0'; // |pattern1|pattern2
+    flags.pattern[1] = '\0'; 
+    size_t pattern_size = 0;
     for (;currentFlag != -1
-         ;currentFlag = getopt(argc, argv, "eivclno")) {
+         ;currentFlag = getopt_long(argc, argv, "e:ivclno", 0, 0)) {
         switch (currentFlag)
         {
             break; case 'e':
-                temp_size = strlen(optarg);
-                flags.pattern = xrealloc(flags.pattern, pattern_size + temp_size + 2); //+2 kruglie skobochki
-                flags.pattern[pattern_size] = '(';
-                memcpy(flags.pattern + pattern_size - 1, optarg, temp_size + 1);
-                flags.regex_flag |= REG_EXTENDED;      //логическое или
+                flags.pattern = string_append_expr(flags.pattern, &pattern_size, optarg, strlen(optarg));
+                // flags.regex_flag |= REG_EXTENDED;      //логическое или
             break; case 'i':
                 flags.regex_flag |= REG_ICASE;      //логическое или
             break; case 'v':
@@ -70,6 +82,10 @@ Flags GrepReadFlags(int argc,char *argv[]){
                 flags.printMatched = true;   
         }
     }
+    if (pattern_size) {
+        flags.size = pattern_size;
+    }
+    flags.size = pattern_size;
     return flags;
 }
 
@@ -160,30 +176,47 @@ void GrepFile(FILE *file, Flags flags, regex_t *preg, char *filename) {
 void Grep(int argc, char *argv[], Flags flags) {
     char **pattern = &argv[1];
     char **end = &argv[argc];
-    int count = 0;
+    // int count = 0;
     regex_t preg_storage;
     regex_t *preg = &preg_storage;
-    for (;pattern[0][0] == '-' && pattern != end;++pattern)
-        ;
-    if (pattern == end) {
-        fprintf(stderr, "no pattern\n");
-        exit(1);
-    }
-    if (regcomp(preg, *pattern, flags.regex_flag)) {
-        fprintf(stderr, "failed to compile regex\n");
-        exit(1);
-    }
-    for (char **filename = pattern + 1;filename != end ; ++filename) {
-        if (**filename == '-')
-            continue;   
-        ++count;
-        if (count >= 2) {
-            break;
+    if (flags.size == 0) {
+        // for (;pattern[0][0] == '-' && pattern != end;++pattern)
+        //     ;
+        // if (pattern == end) {
+        //     fprintf(stderr, "no pattern\n");
+        //     exit(1);
+        // }
+        if (regcomp(preg, argv[0], flags.regex_flag)) {
+            fprintf(stderr, "failed to compile regex\n");
+            exit(1);
         }
     }
-    for (char **filename = pattern + 1;filename != end ; ++filename) {
-        if (**filename == '-')
-            continue;
+    else {
+        if (regcomp(preg, flags.pattern + 2, flags.regex_flag)) {
+            fprintf(stderr, "failed to compile regex\n");
+            exit(1);
+        }
+    }
+    free(flags.pattern);
+
+    // for (char **filename = argv + 1;filename != end ; ++filename) {
+    //     if (**filename == '-')
+    //         continue;   
+    //     ++count;
+    //     if (count >= 2) {
+    //         break;
+    //     }
+    // }
+
+    if (argc == (flags.size ? 2 : 1)){
+        if (flags.count) {
+            GrepCount(stdin, "", flags, preg, 1);
+        }
+        else
+            GrepFile(stdin, flags, preg, "");
+    }
+
+    for (char **filename = argv + (flags.size ? 0 : 1);filename != end ; ++filename) {
         FILE *file = fopen(*filename, "rb");
         if (errno) {
             fprintf(stderr,"%s", argv[0]);
@@ -191,7 +224,7 @@ void Grep(int argc, char *argv[], Flags flags) {
             continue;
         }
         if (flags.count) {
-            GrepCount(file, *filename, flags, preg);
+            GrepCount(file, *filename, flags, preg, argc);
         }
         else {
             GrepFile(file, flags, preg, *filename);
@@ -199,8 +232,8 @@ void Grep(int argc, char *argv[], Flags flags) {
         }
         fclose(file);
     }
+    regree(preg);
 }
-
 // znacheniya po umolchaniy dlya table ascii
 #if 0
 void CatSetTable(const char *table[static 256]) {
@@ -278,7 +311,13 @@ void CatSetNonPrintable(const char *table[static 256]) {
 #endif
 
 int main(int argc, char *argv[]) {
-    Flags flags = GrepReadFlags;
+    Flags flags = GrepReadFlags(argc, argv);
+    argv += optind;
+    argc -= optind;
+    if (argc == 0) {
+        fprintf(stderr, "no pattern\n");
+        exit(1);
+    }
     Grep(argc, argv, flags);
 
 }
