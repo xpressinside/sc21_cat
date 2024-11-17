@@ -232,7 +232,7 @@ void Grep(int argc, char *argv[], Flags flags) {
         }
         fclose(file);
     }
-    regree(preg);
+    regfree(preg);
 }
 // znacheniya po umolchaniy dlya table ascii
 #if 0
