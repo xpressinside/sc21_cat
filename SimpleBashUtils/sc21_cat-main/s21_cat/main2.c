@@ -6,18 +6,19 @@
 #include <errno.h>
 
 
-
+// dlya numberNonBlank. numberAll, squeeze menyaem sposob vivoda
+// dlya markEndl, tab, printNonPrintable menyaem znaki v tablice ascii
 
 typedef struct {
-    bool numberNonBlank;            //b
-    bool markEndl;                  //e + v, E
-    bool numberAll;                 //n
-    bool squeeze;                   //s
-    bool tab;                       //t + v, T
-    bool printNonPrintable;         //v
+    bool numberNonBlank;            //b  done
+    bool markEndl;                  //e + v, E  done 
+    bool numberAll;                 //n  done
+    bool squeeze;                   //s  ????done?????
+    bool tab;                       //t + v, T  done
+    bool printNonPrintable;         //v     done
 }Flags;
 
-
+// obrabotka flagov
 Flags CatReadFlags(int argc, char *argv[]) {
     struct option longFlags[] = {
         {"number-nonblank", 0, NULL, 'b'},
@@ -63,32 +64,39 @@ Flags CatReadFlags(int argc, char *argv[]) {
 
 }
 
+// chitaem otriki fail i vivdoim soderzhimoe soglasno flagam
 void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
     int c = 0;
     int last;
     int linenumber = 0;
+    bool squeeze = false;
     last = '\n';
     while (fread(&c, 1, 1, file) > 0) {
         // printf("%c", c);
         if (last == '\n') {
+            if (flags.squeeze && c == '\n') {
+                if (squeeze)
+                    continue;
+                squeeze = true;
+            }
+            else
+                squeeze = false;
             if (flags.numberNonBlank) {
                 if (c != '\n')
                     printf("%6i\t", ++linenumber);
             }
-            // else if (flags.numberAll) {
-            //     printf("%6i\t", ++linenumber);
-            // } 
+            else if (flags.numberAll) {
+                printf("%6i\t", ++linenumber);
+            } 
         }
         // if (!*table[c])
         //     printf("%c", '\0');
         // else
-
-
-        printf("%s", table[c]);
+            printf("%s", table[c]);
         last = c;
     }
 }
-
+// otkrivaem fail
 void CatOpenFile(int argc, char *argv[], Flags flags, const char *table[static 256]) {
     for (char **filename = &argv[1], **end = &argv[argc];
         filename != end;
@@ -107,6 +115,8 @@ void CatOpenFile(int argc, char *argv[], Flags flags, const char *table[static 2
         }
 }
 
+// tablica ascii simvolov \0 eto NULL-terminator ispolzuetsa dlya oboznacheniya otdelnih simvolov
+// \x simvoli s 127 po 255
 void CatSetTable(const char *table[static 256]) {
 
     const char *rawTable[] = {
@@ -140,9 +150,38 @@ void CatSetTable(const char *table[static 256]) {
         memcpy(table, rawTable, sizeof rawTable);
 }
 
+void CatNonPrintable(const char *table[static 256]) {
+    const char *s1[] = {"^@", "^A", "^B", "^C", "^D", "^E", "^F", "^G", "^H"};
+    const char *s2[] = {
+        "^K", "^L", "^M", "^N", "^O", "^P", "^Q", "^R", "^S",
+        "^T", "^U", "^V", "^W", "^X", "^Y", "^Z", "^[", "^\\", "^]",
+        "^^", "^_"
+    };
+    const char *s3[] = {
+        "^?", "M-^@", "M-^A",
+        "M-^B", "M-^C", "M-^D", "M-^E", "M-^F", "M-^G", "M-^H", "M-^I", "M-^J", "M-^K",
+        "M-^L", "M-^M", "M-^N", "M-^O", "M-^P", "M-^Q", "M-^R", "M-^S", "M-^T", "M-^U",
+        "M-^V", "M-^W", "M-^X", "M-^Y", "M-^Z", "M-^[", "M-^\\", "M-^]", "M-^^", "M-^_",
+        "M- ", "M-!", "M-\"", "M-#", "M-$", "M-%", "M-&", "M-'", "M-(", "M-)",
+        "M-*", "M-+", "M-,", "M--", "M-.", "M-/", "M-0", "M-1", "M-2", "M-3",
+        "M-4", "M-5", "M-6", "M-7", "M-8", "M-9", "M-:", "M-;", "M-<", "M-=",
+        "M->", "M-?", "M-@", "M-A", "M-B", "M-C", "M-D", "M-E", "M-F", "M-G",
+        "M-H", "M-I", "M-J", "M-K", "M-L", "M-M", "M-N", "M-O", "M-P", "M-Q",
+        "M-R", "M-S", "M-T", "M-U", "M-V", "M-W", "M-X", "M-Y", "M-Z", "M-[",
+        "M-\\", "M-]", "M-^", "M-_", "M-`", "M-a", "M-b", "M-c", "M-d", "M-e",
+        "M-f", "M-g", "M-h", "M-i", "M-j", "M-k", "M-l", "M-m", "M-n", "M-o",
+        "M-p", "M-q", "M-r", "M-s", "M-t", "M-u", "M-v", "M-w", "M-x", "M-y",
+        "M-z", "M-{", "M-|", "M-}", "M-~", "M-^?"
+    };  
+    
+    memcpy(table, s1, sizeof s1);
+    memcpy(&table[9 + 2], s2, sizeof s2);
+    memcpy(&table['~' + 1], s3, sizeof s3);
+}
 
-
-
+// void CatMarkEndl(const char *table[static 256]) {
+//     table['\n'] = "$\n";
+// }
 
 
 
@@ -150,27 +189,15 @@ int main(int argc, char *argv[]) {
     Flags flags = CatReadFlags(argc, argv);
     const char *table[256];
     CatSetTable(table);
-
+    if (flags.markEndl) {           //change \n na $\n
+        // CatMarkEndl(table);
+        table['\n'] = "$\n";
+    }
+    if (flags.printNonPrintable) {      // change table ascii to nonprintable ascii
+        CatNonPrintable(table);
+    }
+    if (flags.tab) {                //change \t na "^I"
+        table['\t'] = "^I";
+    }    
     CatOpenFile(argc, argv, flags, table);
-
-
-    // const char *table[256];
-    // CatSetTable(table);
-    // if (flags.numberNonBlank)        done in CatFile
-    //     printf("number non blank \n");
-    // if (flags.markEndl)
-    //     CatSetEndl(table);
-    // if (flags.numberAll)         done in CatFile
-    //     printf("numberAll \n");
-    // if (flags.squeeze)           done in CatFile
-    //     printf("squeeze \n");
-    // if (flags.tab)
-    //     CatSetTab(table);
-    // if (flags.printNonPrintable)
-    //     CatSetNonPrintable(table);
-    
-    // CatFile(stdin, flags, table);
-    
-    // Cat(argc, argv, flags, table);
-
 }
