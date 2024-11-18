@@ -62,13 +62,30 @@ Flags CatReadFlags(int argc, char *argv[]) {
     return flags;
 
 }
-//
+
 void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
-    char c;
-    // printf("%s", c);
+    int c = 0;
+    int last;
+    int linenumber = 0;
+    last = '\n';
     while (fread(&c, 1, 1, file) > 0) {
-        printf("%c", c);
-        // printf("%s", table[c]);
+        // printf("%c", c);
+        if (last == '\n') {
+            if (flags.numberNonBlank) {
+                if (c != '\n')
+                    printf("%6i\t", ++linenumber);
+            }
+            // else if (flags.numberAll) {
+            //     printf("%6i\t", ++linenumber);
+            // } 
+        }
+        // if (!*table[c])
+        //     printf("%c", '\0');
+        // else
+
+
+        printf("%s", table[c]);
+        last = c;
     }
 }
 
@@ -133,8 +150,7 @@ int main(int argc, char *argv[]) {
     Flags flags = CatReadFlags(argc, argv);
     const char *table[256];
     CatSetTable(table);
-    if (flags.numberNonBlank)
-        printf("flag b on");
+
     CatOpenFile(argc, argv, flags, table);
 
 
