@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <getopt.h>
@@ -23,7 +24,7 @@ Flags CatReadFlags(int argc, char *argv[]) {
     struct option longFlags[] = {
         {"number-nonblank", 0, NULL, 'b'},
         {"number", 0, NULL, 'n'},
-        {"squeeze-blank", 0, NULL},
+        {"squeeze-blank", 0, NULL, 's'},
         {NULL, 0, NULL, 0}
     };
 
@@ -58,6 +59,9 @@ Flags CatReadFlags(int argc, char *argv[]) {
                 flags.printNonPrintable = true;
                 break; case 'T':
                 flags.tab = true;
+                break;default:
+                fprintf(stderr, "Try %s [ -b | -e | -v | -E | -n | -s | -t | -T ]\n", argv[0]);
+                exit(1);
             }
         }
     return flags;
@@ -89,10 +93,7 @@ void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
                 printf("%6i\t", ++linenumber);
             } 
         }
-        // if (!*table[c])
-        //     printf("%c", '\0');
-        // else
-            printf("%s", table[c]);
+        printf("%s", table[c]);
         last = c;
     }
 }
