@@ -277,35 +277,51 @@ Flags CatReadFlags(int argc, char *argv[]) {
     return flags;
 
 }
+
 void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, char *filename) {
     (void)flags;
     char *line = 0;
     size_t length = 0;
     regmatch_t match;       // dlya obrabotki sovpadenii
     while (getline(&line, &length, file) > 0) {
-        if (regexec(preg, line, 1, &match, 0)) {
+        if (!regexec(preg, line, 1, &match, 0)) {
             printf("%s", line);
         }
     }
+    free(line);
 }
 
 void GrepOpenFile(int argc, char *argv[], Flags flags) {
+    
     regex_t preg_storage;
     regex_t *preg = &preg_storage;
-    if (flags.size == 0) {
-        if (regcomp(preg, argv[0], flags.pattern)) {
-            fprintf(stderr, "fail compile regex\n");
-            exit(1);
-        }
+
+    char **pattern = argv[1];
+    char **end = argv[argc];
+    
+    for (;pattern != end && pattern[0][0] == '-'; ++pattern)
+        ;
+    if (pattern == end) {
+        fprintf(stderr, "no pattern\n");
+        exit(1);
     }
-    else {
-        if (regcomp(preg, flags.pattern + 2, flags.pattern)) {
-            fprintf(stderr, "fail compile regex\n");
-            exit(1);
-        }
+    if (regcomp(preg, *pattern, 0)) {
+        fprintf(stderr, "fail compile regex \n")
     }
-    free(flags.pattern);
-    for (char **filename = &argv[1], **end = &argv[argc];
+    // if (flags.size == 0) {
+    //     if (regcomp(preg, argv[0], flags.pattern)) {
+    //         fprintf(stderr, "fail compile regex\n");
+    //         exit(1);
+    //     }
+    // }
+    // else {
+    //     if (regcomp(preg, flags.pattern + 2, flags.pattern)) {
+    //         fprintf(stderr, "fail compile regex\n");
+    //         exit(1);
+    //     }
+    // }
+    // free(flags.pattern);
+    for (char **filename = pattern + 1;
         filename != end;
         ++filename) {
         FILE *file = fopen(*filename, "rb");
@@ -321,7 +337,8 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
 
 
 int main(int argc, char *argv[]) {
-    Flags flags = CatReadFlags(argc, argv);
+    // Flags flags = CatReadFlags(argc, argv);
+    Flags flags = {};
    
     GrepOpenFile(argc, argv, flags);
 }
