@@ -253,7 +253,7 @@ Flags CatReadFlags(int argc, char *argv[]) {
             switch (currentFlag)
             {
                 case 'e':
-                flags.pattern = true;
+                //flags.pattern = true;
                 break; case 'i':
                 flags.ignoreUpperLowerCase = true;
                 break; case 'v':
@@ -296,17 +296,28 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
     regex_t preg_storage;
     regex_t *preg = &preg_storage;
 
-    char **pattern = argv[1];
-    char **end = argv[argc];
+    char **pattern = argv + 1;
+    char **end = &argv[argc];
+    if (argc == 1) {
+        fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
+        exit(1);
+    }
+    if (argc == 2) {
+        char input[256];
+        while(fgets(input,sizeof(input),stdin) != NULL) {
+            ;
+        }
+    }
     
     for (;pattern != end && pattern[0][0] == '-'; ++pattern)
         ;
-    if (pattern == end) {
+    if (pattern == end) {        
         fprintf(stderr, "no pattern\n");
         exit(1);
     }
     if (regcomp(preg, *pattern, 0)) {
-        fprintf(stderr, "fail compile regex \n")
+        fprintf(stderr, "fail compile regex \n");
+        exit(1);
     }
     // if (flags.size == 0) {
     //     if (regcomp(preg, argv[0], flags.pattern)) {
@@ -333,6 +344,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         GrepReadPrintFile(file, flags, preg, *filename);
         fclose(file);
     }
+    regfree(preg);
 }
 
 
