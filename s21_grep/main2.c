@@ -216,15 +216,15 @@ typedef struct {
     char *pattern;                  // -e pattern
     size_t size;            // -e pattern
 
-    bool ignoreUpperLowerCase;      // -i ignore upper_lower_case in patter and file
+    int ignoreUpperLowerCase;       // -i ignore upper_lower_case in patter and file REGEX
     bool invert;                    // -v invert match, output lines without pattern
     bool countMatch;                // -c output number matched lines
     bool matchNames;                // -l output file name if patter found in file
     bool lineMatch;                 // -n print eache matched line number
-    bool noFileName;                // -h output matched line without name of files
-    bool supressErrors;             // -s no errors just exit
-    bool fileRegex;                 // -f file   regex from file 
-    bool outputFullMatch;           // -o output full matched parts of files
+    bool noFileName;                //  dop zadanie -h output matched line without name of files
+    bool supressErrors;             //  dop zadanie -s no errors just exit
+    bool fileRegex;                 //  dop zadanie -f file   regex from file 
+    bool outputFullMatch;           //  dop zadanie -o output full matched parts of files 
         
 }Flags;
 
@@ -235,7 +235,7 @@ Flags CatReadFlags(int argc, char *argv[]) {
     Flags flags = {
         0,
         0,
-        false,
+        0,
         false,
         false,
         false,
@@ -255,7 +255,7 @@ Flags CatReadFlags(int argc, char *argv[]) {
                 case 'e':
                 //flags.pattern = true;
                 break; case 'i':
-                flags.ignoreUpperLowerCase = true;
+                flags.ignoreUpperLowerCase |= REG_ICASE;
                 break; case 'v':
                 flags.invert = true;
                 break; case 'c':
@@ -293,11 +293,6 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, char *filename) {
 
 void GrepOpenFile(int argc, char *argv[], Flags flags) {
     
-    regex_t preg_storage;
-    regex_t *preg = &preg_storage;
-
-    char **pattern = argv + 1;
-    char **end = &argv[argc];
     if (argc == 1) {
         fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
         exit(1);
@@ -308,6 +303,11 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             ;
         }
     }
+
+    regex_t preg_storage;
+    regex_t *preg = &preg_storage;
+    char **pattern = argv + 1;
+    char **end = &argv[argc];
     
     for (;pattern != end && pattern[0][0] == '-'; ++pattern)
         ;
@@ -315,7 +315,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         fprintf(stderr, "no pattern\n");
         exit(1);
     }
-    if (regcomp(preg, *pattern, 0)) {
+    if (regcomp(preg, *pattern, flags.ignoreUpperLowerCase)) {
         fprintf(stderr, "fail compile regex \n");
         exit(1);
     }
