@@ -315,6 +315,9 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 if (flags.matchNames && !namePrinted) {
                     printf("%s", filename);
                     namePrinted = true;
+                } 
+                else if (flags.matchNames && namePrinted){
+                    continue;
                 }
                 else {
                     if (count_file == 2) {
@@ -331,6 +334,9 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 if (flags.matchNames && !namePrinted) {
                     printf("%s", filename);
                     namePrinted = true;
+                }
+                else if (flags.matchNames && namePrinted){
+                    continue;
                 }
                 else {
                     if (count_file == 2) {
