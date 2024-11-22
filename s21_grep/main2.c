@@ -212,12 +212,16 @@
 //     regfree(preg);
 // }
 
+
+
+// combo flags, -iv+
+
 typedef struct {
     char *pattern;                  // -e pattern
     size_t size;            // -e pattern
 
-    int ignoreUpperLowerCase;       // -i ignore upper_lower_case in patter and file REGEX
-    bool invert;                    // -v invert match, output lines without pattern
+    int ignoreUpperLowerCase;       //+ -i ignore upper_lower_case in patter and file REGEX
+    bool invert;                    //+ -v invert match, output lines without pattern
     bool countMatch;                // -c output number matched lines
     bool matchNames;                // -l output file name if patter found in file
     bool lineMatch;                 // -n print eache matched line number
@@ -278,15 +282,51 @@ Flags CatReadFlags(int argc, char *argv[]) {
 
 }
 
+void GrepCountReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, const char *filename) {
+    (void)flags;
+    (void)filename;
+    char *line = 0;
+    size_t length = 0;
+    regmatch_t match;
+    int count = 0;
+    while (getline(&line, &length, file) > 0) {
+        if (!regexec(preg, line, 1, &match, 0)){
+            ++count;
+        }
+    }
+    printf("%i\n",count);
+    free(line);
+}
+
 void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, char *filename) {
     (void)flags;
     char *line = 0;
     size_t length = 0;
     regmatch_t match;       // dlya obrabotki sovpadenii
     while (getline(&line, &length, file) > 0) {
-        if (!regexec(preg, line, 1, &match, 0)) {
-            printf("%s", line);
+        if (flags.invert) {
+            if (regexec(preg, line, 1, &match, 0)) {
+                if (flags.countMatch) {
+                    printf("%i", count);
+                } 
+                else {
+                    printf("%s", line);
+                }
+            }
         }
+        else {
+            if (!regexec(preg, line, 1, &match, 0)) {
+                if (flags.countMatch) {
+                    printf("%i", count);
+                } 
+                else {
+                    printf("%s", line);
+                }
+            }
+        }
+        // if (!regexec(preg, line, 1, &match, 0)) {
+        //     printf("%s", line);
+        // }
     }
     free(line);
 }
@@ -349,8 +389,8 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
 
 
 int main(int argc, char *argv[]) {
-    // Flags flags = CatReadFlags(argc, argv);
-    Flags flags = {};
+    Flags flags = CatReadFlags(argc, argv);
+    // Flags flags = {};
    
     GrepOpenFile(argc, argv, flags);
 }
