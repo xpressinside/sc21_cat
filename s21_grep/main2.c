@@ -222,7 +222,7 @@ typedef struct {
 
     int ignoreUpperLowerCase;       //+ -i ignore upper_lower_case in patter and file REGEX
     bool invert;                    //+ -v invert match, output lines without pattern
-    bool countMatch;                // -c output number matched lines
+    bool countMatch;                //+ -c output number matched lines
     bool matchNames;                // -l output file name if patter found in file
     bool lineMatch;                 // -n print eache matched line number
     bool noFileName;                //  dop zadanie -h output matched line without name of files
@@ -311,21 +311,31 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
     while (getline(&line, &length, file) > 0) {
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
-                if (count_file == 2) {
-                    printf("%s\n", line);
+                if (flags.matchNames) {
+                    printf("%s", filename);
                 }
                 else {
-                    printf("%s:%s\n", filename, line);
+                    if (count_file == 2) {
+                        printf("%s", line);
+                    }
+                    else {
+                        printf("%s:%s", filename, line);
+                    }
                 }
             }
         }
         else {
             if (!regexec(preg, line, 1, &match, 0)) {
-                if (count_file == 2) {
-                    printf("%s\n", line);
+                if (flags.matchNames) {
+                    printf("%s", filename);
                 }
                 else {
-                    printf("%s:%s\n", filename, line);
+                    if (count_file == 2) {
+                        printf("%s", line);
+                    }
+                    else {
+                        printf("%s:%s", filename, line);
+                    }
                 }
             }
         }
@@ -388,7 +398,6 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         }
         if (flags.countMatch){
             GrepCountReadPrintFile(file, flags, preg, argc, *filename);
-
         }
         else {
             GrepReadPrintFile(file, flags, preg, argc, *filename);
