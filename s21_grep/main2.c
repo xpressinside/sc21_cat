@@ -308,11 +308,13 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
     char *line = 0;
     size_t length = 0;
     regmatch_t match;       // dlya obrabotki sovpadenii
+    bool namePrinted = false;
     while (getline(&line, &length, file) > 0) {
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
-                if (flags.matchNames) {
+                if (flags.matchNames && !namePrinted) {
                     printf("%s", filename);
+                    namePrinted = true;
                 }
                 else {
                     if (count_file == 2) {
@@ -326,8 +328,9 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
         }
         else {
             if (!regexec(preg, line, 1, &match, 0)) {
-                if (flags.matchNames) {
+                if (flags.matchNames && !namePrinted) {
                     printf("%s", filename);
+                    namePrinted = true;
                 }
                 else {
                     if (count_file == 2) {
