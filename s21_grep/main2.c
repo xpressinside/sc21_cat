@@ -294,11 +294,16 @@ void GrepCountReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_fi
             ++count;
         }
     }
-    printf("%i\n",count);
+    if (count_file == 2) {
+        printf("%i\n",count);
+    }
+    else {
+        printf("%s:%i\n", filename, count);
+    }
     free(line);
 }
 
-void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, char *filename) {
+void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, char *filename) {
     (void)flags;
     char *line = 0;
     size_t length = 0;
@@ -306,21 +311,21 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, char *filename) {
     while (getline(&line, &length, file) > 0) {
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
-                if (flags.countMatch) {
-                    printf("%i", count);
-                } 
+                if (count_file == 2) {
+                    printf("%s\n", line);
+                }
                 else {
-                    printf("%s", line);
+                    printf("%s:%s\n", filename, line);
                 }
             }
         }
         else {
             if (!regexec(preg, line, 1, &match, 0)) {
-                if (flags.countMatch) {
-                    printf("%i", count);
-                } 
+                if (count_file == 2) {
+                    printf("%s\n", line);
+                }
                 else {
-                    printf("%s", line);
+                    printf("%s:%s\n", filename, line);
                 }
             }
         }
@@ -381,7 +386,13 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             perror(*filename);
             continue;
         }
-        GrepReadPrintFile(file, flags, preg, *filename);
+        if (flags.countMatch){
+            GrepCountReadPrintFile(file, flags, preg, argc, *filename);
+
+        }
+        else {
+            GrepReadPrintFile(file, flags, preg, argc, *filename);
+        }
         fclose(file);
     }
     regfree(preg);
