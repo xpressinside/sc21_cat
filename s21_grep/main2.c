@@ -223,7 +223,7 @@ typedef struct {
     int ignoreUpperLowerCase;       //+ -i ignore upper_lower_case in patter and file REGEX
     bool invert;                    //+ -v invert match, output lines without pattern
     bool countMatch;                //+ -c output number matched lines
-    bool matchNames;                // -l output file name if patter found in file
+    bool matchNames;                //+ -l output file name if patter found in file
     bool lineMatch;                 // -n print eache matched line number
     bool noFileName;                //  dop zadanie -h output matched line without name of files
     bool supressErrors;             //  dop zadanie -s no errors just exit
@@ -309,7 +309,9 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
     size_t length = 0;
     regmatch_t match;       // dlya obrabotki sovpadenii
     bool namePrinted = false;
+    int count = 0;
     while (getline(&line, &length, file) > 0) {
+        ++count;
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
                 if (flags.matchNames && !namePrinted) {
@@ -320,11 +322,16 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                     continue;
                 }
                 else {
-                    if (count_file == 2) {
-                        printf("%s", line);
+                    if (flags.lineMatch) {
+                        printf("%s:%i:%s", filename, count, line);
                     }
                     else {
-                        printf("%s:%s", filename, line);
+                        if (count_file == 2) {
+                            printf("%s", line);
+                        }
+                        else {
+                            printf("%s:%s", filename, line);
+                        }
                     }
                 }
             }
@@ -339,11 +346,16 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                     continue;
                 }
                 else {
-                    if (count_file == 2) {
-                        printf("%s", line);
+                    if (flags.lineMatch) {
+                        printf("%s:%i:%s", filename, count, line);
                     }
                     else {
-                        printf("%s:%s", filename, line);
+                        if (count_file == 2) {
+                            printf("%s", line);
+                        }
+                        else {
+                            printf("%s:%s", filename, line);
+                        }
                     }
                 }
             }
