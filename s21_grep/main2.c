@@ -323,7 +323,12 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 }
                 else {
                     if (flags.lineMatch) {
-                        printf("%s:%i:%s", filename, count, line);
+                        if (count_file == 2) {
+                            printf("%i:%s", count, line);
+                        }
+                        else {
+                            printf("%s:%i:%s", filename, count, line);
+                        }
                     }
                     else {
                         if (count_file == 2) {
@@ -347,7 +352,12 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 }
                 else {
                     if (flags.lineMatch) {
-                        printf("%s:%i:%s", filename, count, line);
+                        if (count_file == 2) {
+                            printf("%i:%s", count, line);
+                        }
+                        else {
+                            printf("%s:%i:%s", filename, count, line);
+                        }
                     }
                     else {
                         if (count_file == 2) {
