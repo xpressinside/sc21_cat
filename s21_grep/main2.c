@@ -224,7 +224,7 @@ typedef struct {
     bool invert;                    //+ -v invert match, output lines without pattern
     bool countMatch;                //+ -c output number matched lines
     bool matchNames;                //+ -l output file name if patter found in file
-    bool lineMatch;                 // -n print eache matched line number
+    bool lineMatch;                 // -n print each matched line number
     bool noFileName;                //  dop zadanie -h output matched line without name of files
     bool supressErrors;             //  dop zadanie -s no errors just exit
     bool fileRegex;                 //  dop zadanie -f file   regex from file 
@@ -379,22 +379,28 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
 
 void GrepOpenFile(int argc, char *argv[], Flags flags) {
     
-    if (argc == 1) {
+    if (argc == 1 || (argc == 2 && *argv[1] == '-')) {
         fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
         exit(1);
     }
-    if (argc == 2) {
-        char input[256];
-        while(fgets(input,sizeof(input),stdin) != NULL) {
-            ;
+    else {
+        if (argc == 2) {
+            char input[256];
+            while (fgets(input, sizeof(input), stdin) != NULL) {
+                ;
+            }
         }
     }
+
+
 
     regex_t preg_storage;
     regex_t *preg = &preg_storage;
     char **pattern = argv + 1;
     char **end = &argv[argc];
-    
+
+
+
     for (;pattern != end && pattern[0][0] == '-'; ++pattern)
         ;
     if (pattern == end) {        
