@@ -60,7 +60,7 @@ Flags CatReadFlags(int argc, char *argv[]) {
                 break; case 'T':
                 flags.tab = true;
                 break;default:
-                fprintf(stderr, "Try %s [ -b | -e | -v | -E | -n | -s | -t | -T ]\n", argv[0]);
+                fprintf(stderr, "Try %s [ -b | -e | -E | -n | -s | -t | -T ]\n", argv[0]);
                 exit(1);
             }
         }
@@ -91,7 +91,7 @@ void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
             }
             else if (flags.numberAll) {
                 printf("%6i\t", ++linenumber);
-            } 
+            }
         }
         printf("%s", table[c]);
         last = c;
@@ -99,6 +99,15 @@ void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
 }
 // otkrivaem fail
 void CatOpenFile(int argc, char *argv[], Flags flags, const char *table[static 256]) {
+    if (argc == 1) {
+        char input[256];
+        while (fgets(input, sizeof(input), stdin) != NULL) {
+            printf("%s", input);
+        }
+    }
+    if (*argv[1] == '-' && argv[2] == NULL) {
+        CatReadPrintFile(stdin, flags, table);
+    }
     for (char **filename = &argv[1], **end = &argv[argc];
         filename != end;
         ++filename) {
