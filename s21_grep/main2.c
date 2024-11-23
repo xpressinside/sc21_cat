@@ -219,14 +219,14 @@
 typedef struct {
     //char *pattern;                  // -e pattern
     //size_t size;            // -e pattern
-    int regExtendedIcase;           // -e pattern REGEX
-    //int ignoreUpperLowerCase;       //+ -i ignore upper_lower_case in patter and file REGEX
+    int regExtendedIcase;           //+ -e pattern REGEX
+    //int ignoreUpperLowerCase;     //+ -i ignore upper_lower_case in patter and file REGEX
     bool invert;                    //+ -v invert match, output lines without pattern
     bool countMatch;                //+ -c output number matched lines
     bool matchNames;                //+ -l output file name if patter found in file
     bool lineMatch;                 //+ -n print each matched line number
-    bool noFileName;                //  dop zadanie -h output matched line without name of files
-    bool supressErrors;             //  dop zadanie -s no errors just exit
+    bool noFileName;                //+  dop zadanie -h output matched line without name of files
+    bool supressErrors;             //+  dop zadanie -s no errors just exit
     bool fileRegex;                 //  dop zadanie -f file   regex from file 
     bool outputFullMatch;           //  dop zadanie -o output full matched parts of files 
         
@@ -237,7 +237,6 @@ Flags CatReadFlags(int argc, char *argv[]) {
 
 
     Flags flags = {
-        0,
         0,
         false,
         false,
@@ -293,13 +292,49 @@ void GrepCountReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_fi
             ++count;
         }
     }
-    if (count_file == 2) {
+    if (count_file == 2 && !(flags.noFileName)) {
         printf("%s:%i\n", filename, count);
     }
     else {
         printf("%i\n",count); 
     }
     free(line);
+}
+
+void *xmalloc(size_t size) {
+    void *temp;
+    temp = malloc(size);
+    if (!temp)
+        exit(errno);
+    return temp;
+}
+
+void GrepFromFileReadPrint(const char *patFile, regex_t **regArr, int *count) {
+    FILE *file = fopen(patFile, "r");
+    if (errno && !(flags.supressErrors)) {
+        fprintf(stderr, "%s", argv[0]);
+        perror(*filename);
+        continue;
+    } 
+    else {
+        exit(1);
+    }
+
+    char pattern[256];
+    
+    *count = 0;
+    while (fgets(pattern, sizeof(pattern), file)) {
+        pattern[strcspn(pattern, "\n")] = 0;
+
+        regex_t *preg = xmalloc(sizeof(regex_t));
+        
+        if (regcomp(preg, pattern, REG_EXTENDED)) {
+            fprintf(stderr, "fail compile regex", pattern);
+            exit(1);
+        }
+        regArr[(*count)++] = preg;
+    }
+    fclose(file);
 }
 
 void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, char *filename) {
@@ -309,6 +344,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
     regmatch_t match;       // dlya obrabotki sovpadenii
     bool namePrinted = false;
     int count = 0;
+    
     while (getline(&line, &length, file) > 0) {
         ++count;
         if (flags.invert) {
@@ -322,7 +358,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 }
                 else {
                     if (flags.lineMatch) {
-                        if (count_file == 2) {
+                        if (count_file == 2 && !(flags.noFileName)) {
                             printf("%s:%i:%s", filename, count, line);
 
                         }
@@ -331,7 +367,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                         }
                     }
                     else {
-                        if (count_file == 2) {
+                        if (count_file == 2 && !(flags.noFileName)) {
                             printf("%s:%s", filename, line);
                         }
                         else {
@@ -352,7 +388,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 }
                 else {
                     if (flags.lineMatch) {
-                        if (count_file == 2) {
+                        if (count_file == 2 && !(flags.noFileName)) {
                             printf("%s:%i:%s", filename, count, line);
                         }
                         else {
@@ -360,7 +396,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                         }
                     }
                     else {
-                        if (count_file == 2) {
+                        if (count_file == 2 && !(flags.noFileName)) {
                             printf("%s:%s", filename, line);
                         }
                         else {
@@ -411,19 +447,17 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         fprintf(stderr, "fail compile regex \n");
         exit(1);
     }
-    // if (flags.size == 0) {
-    //     if (regcomp(preg, argv[0], flags.pattern)) {
-    //         fprintf(stderr, "fail compile regex\n");
-    //         exit(1);
-    //     }
-    // }
-    // else {
-    //     if (regcomp(preg, flags.pattern + 2, flags.pattern)) {
-    //         fprintf(stderr, "fail compile regex\n");
-    //         exit(1);
-    //     }
-    // }
-    // free(flags.pattern);
+
+    regex_t *regArr[100];
+    int totalPat = 0;
+
+    if (flags.fileRegex) {
+
+        const char *patFile = *(pattern + 2);
+        GrepFromFileReadPrint(patFile, regArr, &totalPat);
+        pattern += 3;
+    }
+
     for (char **filename = pattern + 1;
         filename != end;
         ++filename) {
@@ -444,18 +478,39 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             continue;
         }
         FILE *file = fopen(*filename, "rb");
-        if (errno) {
+        if (errno && !(flags.supressErrors)) {
             fprintf(stderr, "%s", argv[0]);
             perror(*filename);
             continue;
+        } 
+        else {
+            exit(1);
         }
-        if (flags.countMatch){
-            GrepCountReadPrintFile(file, flags, preg, count, *filename);
+        if (flags.fileRegex) {
+            for (int i = 0; i < totalPat; i++) {
+                *preg = regArr[i];
+                if (flags.countMatch){
+                    GrepCountReadPrintFile(file, flags, preg, count, *filename);
+                }
+                else {
+                    GrepReadPrintFile(file, flags, preg, count, *filename);
+                }
+            }
         }
         else {
-            GrepReadPrintFile(file, flags, preg, count, *filename);
+            if (flags.countMatch){
+                GrepCountReadPrintFile(file, flags, preg, count, *filename);
+            }
+            else {
+                GrepReadPrintFile(file, flags, preg, count, *filename);
+            }
         }
+
         fclose(file);
+    }
+    for (int i = 0; i < totalPat; i++){
+        regfree(regArr[i]);
+        free(regArr[i]);
     }
     regfree(preg);
 }
