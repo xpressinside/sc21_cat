@@ -295,10 +295,10 @@ void GrepCountReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_fi
         }
     }
     if (count_file == 2) {
-        printf("%i\n",count);
+        printf("%s:%i\n", filename, count);
     }
     else {
-        printf("%s:%i\n", filename, count);
+        printf("%i\n",count); 
     }
     free(line);
 }
@@ -353,18 +353,18 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 else {
                     if (flags.lineMatch) {
                         if (count_file == 2) {
-                            printf("%i:%s", count, line);
+                            printf("%s:%i:%s", filename, count, line);
                         }
                         else {
-                            printf("%s:%i:%s", filename, count, line);
+                            printf("%i:%s", count, line);
                         }
                     }
                     else {
                         if (count_file == 2) {
-                            printf("%s", line);
+                            printf("%s:%s", filename, line);
                         }
                         else {
-                            printf("%s:%s", filename, line);
+                            printf("%s", line);
                         }
                     }
                 }
@@ -398,7 +398,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
     regex_t *preg = &preg_storage;
     char **pattern = argv + 1;
     char **end = &argv[argc];
-
+    int count = 0;
 
 
     for (;pattern != end && pattern[0][0] == '-'; ++pattern)
@@ -427,6 +427,22 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
     for (char **filename = pattern + 1;
         filename != end;
         ++filename) {
+            if (**filename == '-') {
+                continue;
+            }
+            ++count;
+            if (count >= 2){
+                break;
+            }
+        }
+    
+    
+    for (char **filename = pattern + 1;
+        filename != end;
+        ++filename) {
+        if (**filename == '-') {
+            continue;
+        }
         FILE *file = fopen(*filename, "rb");
         if (errno) {
             fprintf(stderr, "%s", argv[0]);
@@ -434,10 +450,10 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             continue;
         }
         if (flags.countMatch){
-            GrepCountReadPrintFile(file, flags, preg, argc, *filename);
+            GrepCountReadPrintFile(file, flags, preg, count, *filename);
         }
         else {
-            GrepReadPrintFile(file, flags, preg, argc, *filename);
+            GrepReadPrintFile(file, flags, preg, count, *filename);
         }
         fclose(file);
     }
