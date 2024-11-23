@@ -217,14 +217,14 @@
 // combo flags, -iv+
 
 typedef struct {
-    char *pattern;                  // -e pattern
-    size_t size;            // -e pattern
-
-    int ignoreUpperLowerCase;       //+ -i ignore upper_lower_case in patter and file REGEX
+    //char *pattern;                  // -e pattern
+    //size_t size;            // -e pattern
+    int regExtendedIcase;           // -e pattern REGEX
+    //int ignoreUpperLowerCase;       //+ -i ignore upper_lower_case in patter and file REGEX
     bool invert;                    //+ -v invert match, output lines without pattern
     bool countMatch;                //+ -c output number matched lines
     bool matchNames;                //+ -l output file name if patter found in file
-    bool lineMatch;                 // -n print each matched line number
+    bool lineMatch;                 //+ -n print each matched line number
     bool noFileName;                //  dop zadanie -h output matched line without name of files
     bool supressErrors;             //  dop zadanie -s no errors just exit
     bool fileRegex;                 //  dop zadanie -f file   regex from file 
@@ -237,7 +237,6 @@ Flags CatReadFlags(int argc, char *argv[]) {
 
 
     Flags flags = {
-        0,
         0,
         0,
         false,
@@ -257,9 +256,9 @@ Flags CatReadFlags(int argc, char *argv[]) {
             switch (currentFlag)
             {
                 case 'e':
-                //flags.pattern = true;
+                flags.regExtendedIcase |= REG_EXTENDED;
                 break; case 'i':
-                flags.ignoreUpperLowerCase |= REG_ICASE;
+                flags.regExtendedIcase |= REG_ICASE;
                 break; case 'v':
                 flags.invert = true;
                 break; case 'c':
@@ -315,7 +314,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
                 if (flags.matchNames && !namePrinted) {
-                    printf("%s", filename);
+                    printf("%s\n", filename);
                     namePrinted = true;
                 } 
                 else if (flags.matchNames && namePrinted){
@@ -324,18 +323,19 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                 else {
                     if (flags.lineMatch) {
                         if (count_file == 2) {
-                            printf("%i:%s", count, line);
+                            printf("%s:%i:%s", filename, count, line);
+
                         }
                         else {
-                            printf("%s:%i:%s", filename, count, line);
+                            printf("%i:%s", count, line);
                         }
                     }
                     else {
                         if (count_file == 2) {
-                            printf("%s", line);
+                            printf("%s:%s", filename, line);
                         }
                         else {
-                            printf("%s:%s", filename, line);
+                            printf("%s", line);
                         }
                     }
                 }
@@ -344,7 +344,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
         else {
             if (!regexec(preg, line, 1, &match, 0)) {
                 if (flags.matchNames && !namePrinted) {
-                    printf("%s", filename);
+                    printf("%s\n", filename);
                     namePrinted = true;
                 }
                 else if (flags.matchNames && namePrinted){
@@ -407,7 +407,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         fprintf(stderr, "no pattern\n");
         exit(1);
     }
-    if (regcomp(preg, *pattern, flags.ignoreUpperLowerCase)) {
+    if (regcomp(preg, *pattern, flags.regExtendedIcase)) {
         fprintf(stderr, "fail compile regex \n");
         exit(1);
     }
