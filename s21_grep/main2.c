@@ -200,12 +200,45 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         fprintf(stderr, "no pattern\n");
         exit(1);
     }
+    
+    if (flags.fileRegex) {
+        printf("in flag %s\n", *pattern);
+        FILE *regFile = fopen(*pattern, "r");
+        if (!regFile) {
+            perror("ERROR");
+            exit(1);
+        }
+        printf("in flag 2 %s\n", *pattern);
+        char *filePatterns = NULL;
+        size_t lengthFP = 0;
+        int i = 0;
+        regex_t regexArray[100];
+        printf("in flag 3 %s\n", *pattern);
+        while (getline(&filePatterns, &lengthFP, regFile) != -1) {
+            printf("in flag 3.1 %s\n", *pattern);
+            filePatterns[strcspn(filePatterns,"\n")] = 0;
+            printf("in flag 3.1.1 %s\n", *pattern);
+            if (regcomp(&regexArray[i], filePatterns, 0) != 0) {
+                printf("in flag 3.1.2 %s\n", *pattern);
+                fprintf(stderr,"error compile regex");
+            }
+            printf("in flag 3.2 %s\n", *pattern);
+            (i)++;
+        }
+        printf("in flag 4 %s\n", *pattern);
+        free(filePatterns);
+        fclose(regFile);
+        //pattern += 1;
+ 
+    }
+    //printf("%s\n", *pattern - 1);
+    //printf("%s\n", *pattern);
     if (regcomp(preg, *pattern, flags.regExtendedIcase)) {
         fprintf(stderr, "fail compile regex \n");
         exit(1);
     }
 
-    for (char **filename = pattern + 1;
+    for (char **filename = pattern;
         filename != end;
         ++filename) {
             if (**filename == '-') {
@@ -218,7 +251,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         }
     
     
-    for (char **filename = pattern + 1; filename != end; ++filename) {
+    for (char **filename = pattern; filename != end; ++filename) {
         if (**filename == '-') {
             continue;
         }
