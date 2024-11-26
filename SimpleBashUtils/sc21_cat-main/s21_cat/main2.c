@@ -17,6 +17,8 @@ typedef struct {
     bool squeeze;                   //s  ????done?????
     bool tab;                       //t + v, T  done
     bool printNonPrintable;         //v     done
+    bool moreOneFile;
+    bool flagsWasRead;
 }Flags;
 
 // obrabotka flagov
@@ -34,12 +36,12 @@ Flags CatReadFlags(int argc, char *argv[]) {
         false,
         false,
         false,
+        false,
+        false,
         false
     };
-
-    for (int currentFlag = getopt_long(argc, argv, "bevEnstT", longFlags, NULL);
-        currentFlag != -1;
-        currentFlag = getopt_long(argc, argv, "bevEnstT", longFlags, NULL)) 
+    int currentFlag;
+    while ((currentFlag = getopt_long(argc, argv, "bevEnstT", longFlags, NULL)) != -1)
         {
             switch (currentFlag)
             {
@@ -47,6 +49,8 @@ Flags CatReadFlags(int argc, char *argv[]) {
                 flags.numberNonBlank = true;
                 break; case 'e':
                 flags.markEndl = true;
+                flags.printNonPrintable = true;
+                break; case 'v':
                 flags.printNonPrintable = true;
                 break; case 'E':
                 flags.markEndl = true;
@@ -64,19 +68,18 @@ Flags CatReadFlags(int argc, char *argv[]) {
                 exit(1);
             }
         }
+    flags.flagsWasRead = true;
     return flags;
 
 }
 
 // chitaem otriki fail i vivdoim soderzhimoe soglasno flagam
-void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
+void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256], int *linenumber) {
     int c = 0;
     int last;
-    int linenumber = 0;
     bool squeeze = false;
     last = '\n';
-    while (fread(&c, 1, 1, file) > 0) {
-        // printf("%c", c);
+    while (fread(&c, 1, 1, file) > 0) {        
         if (last == '\n') {
             if (flags.squeeze && c == '\n') {
                 if (squeeze)
@@ -87,28 +90,27 @@ void CatReadPrintFile(FILE *file, Flags flags, const char *table[static 256]) {
                 squeeze = false;
             if (flags.numberNonBlank) {
                 if (c != '\n')
-                    printf("%6i\t", ++linenumber);
+                    printf("%6i\t", ++*linenumber);
             }
             else if (flags.numberAll) {
-                printf("%6i\t", ++linenumber);
+                printf("%6i\t", ++*linenumber);
             }
         }
         printf("%s", table[c]);
         last = c;
     }
+    if (flags.moreOneFile)
+        printf("\n");
 }
 // otkrivaem fail
 void CatOpenFile(int argc, char *argv[], Flags flags, const char *table[static 256]) {
-    if (argc == 1) {
-        char input[256];
-        while (fgets(input, sizeof(input), stdin) != NULL) {
-            printf("%s", input);
-        }
+    if (flags.flagsWasRead && argv[0] == NULL) {
+        int linenumber = 0;
+        CatReadPrintFile(stdin, flags, table, &linenumber);
     }
-    if (*argv[1] == '-' && argv[2] == NULL) {
-        CatReadPrintFile(stdin, flags, table);
-    }
-    for (char **filename = &argv[1], **end = &argv[argc];
+    int linenumber = 0;
+    
+    for (char **filename = argv, **end = &argv[argc];
         filename != end;
         ++filename) {
             if (**filename == '-') {
@@ -120,7 +122,10 @@ void CatOpenFile(int argc, char *argv[], Flags flags, const char *table[static 2
                 perror(*filename);
                 continue;
             }
-            CatReadPrintFile(file, flags, table);
+            if (argv[1] != NULL) {
+                flags.moreOneFile = true;
+            }
+            CatReadPrintFile(file, flags, table, &linenumber);
             fclose(file);
         }
 }
@@ -189,18 +194,19 @@ void CatNonPrintable(const char *table[static 256]) {
     memcpy(&table['~' + 1], s3, sizeof s3);
 }
 
-// void CatMarkEndl(const char *table[static 256]) {
-//     table['\n'] = "$\n";
-// }
-
-
-
 int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        char input[256];
+        while (fgets(input, sizeof(input), stdin) != NULL) {
+            printf("%s", input);
+        }
+    }
     Flags flags = CatReadFlags(argc, argv);
+    argc -= optind;
+    argv += optind;
     const char *table[256];
     CatSetTable(table);
     if (flags.markEndl) {           //change \n na $\n
-        // CatMarkEndl(table);
         table['\n'] = "$\n";
     }
     if (flags.printNonPrintable) {      // change table ascii to nonprintable ascii
@@ -208,6 +214,6 @@ int main(int argc, char *argv[]) {
     }
     if (flags.tab) {                //change \t na "^I"
         table['\t'] = "^I";
-    }    
+    }
     CatOpenFile(argc, argv, flags, table);
 }
