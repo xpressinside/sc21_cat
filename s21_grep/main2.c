@@ -199,6 +199,8 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
         else {
             if (!regexec(preg, line, 1, &match, 0)) {
                 if (flags.outputFullMatch) {
+                    //printf("test1\n");
+                    //printf("%b",flags.matchNames);
                     if (flags.matchNames && !namePrinted) {
                         printf("%s\n", filename);
                         namePrinted = true;
@@ -207,25 +209,42 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                         continue;
                     }
                     else {
-                        char remain = line + match.rm_eo;
+                        if (flags.lineMatch) {
+                            if (count_file == 2 && !(flags.noFileName)) {
+                                printf("%s:%i:%.*s\n", filename, count, match.rm_eo - match.rm_so, line + match.rm_so);
+                            }
+                            else {
+                                printf("%i:%.*s\n", count, match.rm_eo - match.rm_so, line + match.rm_so);
+                            }
+                        }
+                        else {
+                            if (count_file == 2 && !(flags.noFileName)) {
+                                printf("%s:%.*s\n", filename, match.rm_eo - match.rm_so, line + match.rm_so);
+                            }
+                            else {
+                                printf("%.*s\n", match.rm_eo - match.rm_so, line + match.rm_so);
+                            }
+                        }
+                        char *remain = line + match.rm_eo;
                         while (!regexec(preg, remain, 1, &match, 0)) {
                             if (flags.lineMatch) {
                                 if (count_file == 2 && !(flags.noFileName)) {
-                                    printf("%s:%i:%.*s", filename, count, match.rm_eo - match.rm_so, line + match.rm_so);
+                                    printf("%s:%i:%.*s\n", filename, count, match.rm_eo - match.rm_so, remain + match.rm_so);
                                 }
                                 else {
-                                    printf("%i:%.*s", count, match.rm_eo - match.rm_so, line + match.rm_so);
+                                    printf("%i:%.*s\n", count, match.rm_eo - match.rm_so, remain + match.rm_so);
                                 }
                             }
                             else {
                                 if (count_file == 2 && !(flags.noFileName)) {
-                                    printf("%s:%.*s", filename, match.rm_eo - match.rm_so, line + match.rm_so);
+                                    printf("%s:%.*s\n", filename, match.rm_eo - match.rm_so, remain + match.rm_so);
                                 }
                                 else {
-                                    printf("%.*s", match.rm_eo - match.rm_so, line + match.rm_so);
+                                    printf("%.*s\n", match.rm_eo - match.rm_so, remain + match.rm_so);
                                 }
                             }
-                            remain = line + match.rm_eo;
+                            remain = remain + match.rm_eo;
+                            //printf("number 1 \n");
                         }
                     }
                 }
@@ -318,12 +337,14 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
  
     }
     
-    printf("%s\n", *pattern);
+    //printf("%s\n", *pattern);
     if (regcomp(preg, *pattern, flags.regExtendedIcase)) {
         fprintf(stderr, "fail compile regex \n");
         exit(1);
     }
-
+    if (!flags.fileRegex) {
+        pattern += 1;
+    }
     for (char **filename = pattern;
         filename != end;
         ++filename) {
@@ -336,7 +357,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             }
         }
     
-    
+    //printf("%i\n", count);
     for (char **filename = pattern; filename != end; ++filename) {
         if (**filename == '-') {
             continue;
@@ -350,7 +371,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         else if (errno && flags.supressErrors){
             exit(1);
         }
-        printf("%s\n", *filename);
+        //printf("%s\n", *filename);
         if (flags.fileRegex) {
             if (flags.countMatch){
                 GrepCountReadPrintFile(file, flags, regexArray, count, *filename);
