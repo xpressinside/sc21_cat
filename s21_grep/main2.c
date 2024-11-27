@@ -22,7 +22,7 @@ typedef struct {
     bool lineMatch;                 //+ -n print each matched line number
     bool noFileName;                //+  dop zadanie -h output matched line without name of files
     bool supressErrors;             //+  dop zadanie -s no errors just exit
-    bool fileRegex;                 //+  dop zadanie -f file   regex from file 
+    bool fileRegex;                 //  dop zadanie -f file   regex from file 
     bool outputFullMatch;           //  dop zadanie -o output full matched parts of files 
         
 }Flags;
@@ -42,11 +42,10 @@ Flags CatReadFlags(int argc, char *argv[]) {
         false,
         false
     };
-    int currentFlag;
-    //for (int currentFlag = getopt_long(argc, argv, "e:ivclnhsof:", 0, 0);
-    //    currentFlag != -1;
-    //    currentFlag = getopt_long(argc, argv, "e:ivclnhsof:", 0, 0)) 
-    while ((currentFlag = getopt_long(argc, argv, "e:ivclnhsof:", 0, 0)) != -1)
+
+    for (int currentFlag = getopt_long(argc, argv, "e:ivclnhsof:", 0, 0);
+        currentFlag != -1;
+        currentFlag = getopt_long(argc, argv, "e:ivclnhsof:", 0, 0)) 
         {
             switch (currentFlag)
             {
@@ -129,7 +128,7 @@ void GrepReadPrintFileWithPatterns(FILE *file, Flags flags, regex_t *preg, int c
                 namePrinted = true;
             }
             if (flags.lineMatch) {
-                if (!(flags.noFileName) && count_file == 2) {
+                if (!(flags.noFileName)) {
                     printf("%s:%i:%s", filename, count, line);
                 }
                 else {
@@ -137,7 +136,7 @@ void GrepReadPrintFileWithPatterns(FILE *file, Flags flags, regex_t *preg, int c
                 }
             }
             else {
-                if (!(flags.noFileName) && count_file == 2) {
+                if (!(flags.noFileName)) {
                     printf("%s:%s", filename, line);
                 }
                 else {
@@ -164,61 +163,99 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
         bool lineMatch = false;
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
-                if (flags.matchNames && !namePrinted) {
-                    printf("%s\n", filename);
-                    namePrinted = true;
-                } 
-                else if (flags.matchNames && namePrinted){
-                    continue;
+                if (flags.outputFullMatch) {
+                    ;
                 }
                 else {
-                    if (flags.lineMatch) {
-                        if (count_file == 2 && !(flags.noFileName)) {
-                            printf("%s:%i:%s", filename, count, line);
-
-                        }
-                        else {
-                            printf("%i:%s", count, line);
-                        }
+                    if (flags.matchNames && !namePrinted) {
+                        printf("%s\n", filename);
+                        namePrinted = true;
+                    } 
+                    else if (flags.matchNames && namePrinted){
+                        continue;
                     }
                     else {
-                        if (count_file == 2 && !(flags.noFileName)) {
-                            printf("%s:%s", filename, line);
+                        if (flags.lineMatch) {
+                            if (count_file == 2 && !(flags.noFileName)) {
+                                printf("%s:%i:%s", filename, count, line);
+
+                            }
+                            else {
+                                printf("%i:%s", count, line);
+                            }
                         }
                         else {
-                            printf("%s", line);
+                            if (count_file == 2 && !(flags.noFileName)) {
+                                printf("%s:%s", filename, line);
+                            }
+                            else {
+                                printf("%s", line);
+                            }
                         }
                     }
-                }
+                }                    
             }
         }
         else {
             if (!regexec(preg, line, 1, &match, 0)) {
-                if (flags.matchNames && !namePrinted) {
-                    printf("%s\n", filename);
-                    namePrinted = true;
-                }
-                else if (flags.matchNames && namePrinted){
-                    continue;
-                }
-                else {
-                    if (flags.lineMatch) {
-                        if (count_file == 2 && !(flags.noFileName)) {
-                            printf("%s:%i:%s", filename, count, line);
-                        }
-                        else {
-                            printf("%i:%s", count, line);
-                        }
+                if (flags.outputFullMatch) {
+                    if (flags.matchNames && !namePrinted) {
+                        printf("%s\n", filename);
+                        namePrinted = true;
+                    }
+                    else if (flags.matchNames && namePrinted){
+                        continue;
                     }
                     else {
-                        if (count_file == 2 && !(flags.noFileName)) {
-                            printf("%s:%s", filename, line);
-                        }
-                        else {
-                            printf("%s", line);
+                        char remain = line + match.rm_eo;
+                        while (!regexec(preg, remain, 1, &match, 0)) {
+                            if (flags.lineMatch) {
+                                if (count_file == 2 && !(flags.noFileName)) {
+                                    printf("%s:%i:%.*s", filename, count, match.rm_eo - match.rm_so, line + match.rm_so);
+                                }
+                                else {
+                                    printf("%i:%.*s", count, match.rm_eo - match.rm_so, line + match.rm_so);
+                                }
+                            }
+                            else {
+                                if (count_file == 2 && !(flags.noFileName)) {
+                                    printf("%s:%.*s", filename, match.rm_eo - match.rm_so, line + match.rm_so);
+                                }
+                                else {
+                                    printf("%.*s", match.rm_eo - match.rm_so, line + match.rm_so);
+                                }
+                            }
+                            remain = line + match.rm_eo;
                         }
                     }
                 }
+                else {
+                    if (flags.matchNames && !namePrinted) {
+                        printf("%s\n", filename);
+                        namePrinted = true;
+                    }
+                    else if (flags.matchNames && namePrinted){
+                        continue;
+                    }
+                    else {
+                        if (flags.lineMatch) {
+                            if (count_file == 2 && !(flags.noFileName)) {
+                                printf("%s:%i:%s", filename, count, line);
+                            }
+                            else {
+                                printf("%i:%s", count, line);
+                            }
+                        }
+                        else {
+                            if (count_file == 2 && !(flags.noFileName)) {
+                                printf("%s:%s", filename, line);
+                            }
+                            else {
+                                printf("%s", line);
+                            }
+                        }
+                    }
+                }                    
             }
         }
     }
@@ -231,16 +268,26 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
 }
 
 void GrepOpenFile(int argc, char *argv[], Flags flags) {
-   
+    
+    if (argc == 1 || (argc == 2 && *argv[1] == '-')) {
+        fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
+        exit(1);
+    }
+    else {
+        if (argc == 2) {
+            char input[256];
+            while (fgets(input, sizeof(input), stdin) != NULL) {
+                ;
+            }
+        }
+    }
     regex_t preg_storage;
     regex_t *preg = &preg_storage;
-    //printf("%s\n", *argv);
-    char **pattern = argv;
-    //printf("%s\n", *pattern);
+    char **pattern = argv + 1;
     char **end = &argv[argc];
     int count = 0;
 
-    //printf("test 1\n");
+
     for (;pattern != end && pattern[0][0] == '-'; ++pattern)
         ;
     if (pattern == end) {        
@@ -249,9 +296,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
     }
     int i = 0;
     regex_t regexArray[100];
-    //printf("test 2\n");
     if (flags.fileRegex) {
-        //printf("test 2.1\n");
         FILE *regFile = fopen(*pattern, "r");
         if (!regFile) {
             perror("ERROR");
@@ -259,7 +304,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
         }
         char *filePatterns = NULL;
         size_t lengthFP = 0;
-        //printf("test 2.2\n");
+
         while (getline(&filePatterns, &lengthFP, regFile) != -1) {
             filePatterns[strcspn(filePatterns,"\n")] = 0;
             if (regcomp(&regexArray[i], filePatterns, 0) != 0) {
@@ -267,24 +312,21 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             }
             (i)++;
         }
-        //printf("test 2.3\n");
         free(filePatterns);
         fclose(regFile);
-        //pattern += 1;
-        //printf("test 2.4\n");
+        pattern += 1;
+ 
     }
     
-    //printf("%s\n", *pattern);
-    //printf("test 3\n");
-    //if (regcomp(preg, *pattern, flags.regExtendedIcase)) {
-    //    fprintf(stderr, "fail compile regex \n");
-    //    exit(1);
-    //}
-    //printf("test 4\n");
-    for (char **filename = pattern + 1;
+    printf("%s\n", *pattern);
+    if (regcomp(preg, *pattern, flags.regExtendedIcase)) {
+        fprintf(stderr, "fail compile regex \n");
+        exit(1);
+    }
+
+    for (char **filename = pattern;
         filename != end;
         ++filename) {
-            //printf("test 4.1\n");
             if (**filename == '-') {
                 continue;
             }
@@ -294,26 +336,21 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             }
         }
     
-    //printf("test 5\n");
-    //printf("%s\n", *pattern);
+    
     for (char **filename = pattern; filename != end; ++filename) {
         if (**filename == '-') {
             continue;
         }
-        //printf("%s\n", *filename);
         FILE *file = fopen(*filename, "rb");
-        //printf("test 5.1\n");
         if (errno && !(flags.supressErrors)) {
-            //fprintf(stderr, " %s", argv[0]);
+            fprintf(stderr, "%s", argv[0]);
             perror(*filename);
             continue;
         } 
         else if (errno && flags.supressErrors){
-            //printf("test 5.2\n");
             exit(1);
         }
-        //printf("%s\n", *filename);
-        //printf("test 5.3\n");
+        printf("%s\n", *filename);
         if (flags.fileRegex) {
             if (flags.countMatch){
                 GrepCountReadPrintFile(file, flags, regexArray, count, *filename);
@@ -337,20 +374,8 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
 
 
 int main(int argc, char *argv[]) {
-    if (argc == 1 || (argc == 2 && *argv[1] == '-')) {
-        fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
-        exit(1);
-    }
-    else {
-        if (argc == 2) {
-            char input[256];
-            while (fgets(input, sizeof(input), stdin) != NULL) {
-                ;
-            }
-        }
-    }
     Flags flags = CatReadFlags(argc, argv);
-    argc -= optind;
-    argv += optind;
+    // Flags flags = {};
+   
     GrepOpenFile(argc, argv, flags);
 }
