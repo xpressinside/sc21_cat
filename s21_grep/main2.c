@@ -128,7 +128,7 @@ void GrepReadPrintFileWithPatterns(FILE *file, Flags flags, regex_t *preg, int c
                 namePrinted = true;
             }
             if (flags.lineMatch) {
-                if (!(flags.noFileName)) {
+                if (count_file == 2 && !(flags.noFileName)) {
                     printf("%s:%i:%s", filename, count, line);
                 }
                 else {
@@ -136,7 +136,7 @@ void GrepReadPrintFileWithPatterns(FILE *file, Flags flags, regex_t *preg, int c
                 }
             }
             else {
-                if (!(flags.noFileName)) {
+                if (count_file == 2 && !(flags.noFileName)) {
                     printf("%s:%s", filename, line);
                 }
                 else {
@@ -288,24 +288,16 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
 
 void GrepOpenFile(int argc, char *argv[], Flags flags) {
     
-    if (argc == 1 || (argc == 2 && *argv[1] == '-')) {
-        fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
-        exit(1);
-    }
-    else {
-        if (argc == 2) {
-            char input[256];
-            while (fgets(input, sizeof(input), stdin) != NULL) {
-                ;
-            }
-        }
-    }
+
     regex_t preg_storage;
     regex_t *preg = &preg_storage;
     char **pattern = argv + 1;
     char **end = &argv[argc];
     int count = 0;
-
+    if (argc == 1 || (argc == 2 && *argv[1] == '-')) {
+        fprintf(stderr,"Usage: s21_grep [OPTION]... PATTERNS [FILE]...\n");
+        exit(1);
+    }    
 
     for (;pattern != end && pattern[0][0] == '-'; ++pattern)
         ;
@@ -328,6 +320,7 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             filePatterns[strcspn(filePatterns,"\n")] = 0;
             if (regcomp(&regexArray[i], filePatterns, 0) != 0) {
                 fprintf(stderr,"error compile regex");
+                exit(1);
             }
             (i)++;
         }
@@ -357,6 +350,27 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
             }
         }
     
+    if (argc == 2 || (argc == 3 && *argv[1] == '-' && argv[3] == NULL)) {
+        //char input[256];
+        //while (fgets(input, sizeof(input), stdin) != NULL) {
+        while (!NULL) {
+            if (flags.fileRegex) {
+                if (flags.countMatch){
+                    GrepCountReadPrintFile(stdin, flags, regexArray, count, NULL);
+                }
+                else {
+                    GrepReadPrintFileWithPatterns(stdin, flags, regexArray, count, NULL, i);
+                }            
+            } else {
+                if (flags.countMatch){
+                    GrepCountReadPrintFile(stdin, flags, preg, count, NULL);
+                }
+                else {
+                    GrepReadPrintFile(stdin, flags, preg, count, NULL);
+                }
+            }
+        }
+    }
     //printf("%i\n", count);
     for (char **filename = pattern; filename != end; ++filename) {
         if (**filename == '-') {
@@ -397,6 +411,6 @@ void GrepOpenFile(int argc, char *argv[], Flags flags) {
 int main(int argc, char *argv[]) {
     Flags flags = CatReadFlags(argc, argv);
     // Flags flags = {};
-   
+    
     GrepOpenFile(argc, argv, flags);
 }
