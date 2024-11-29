@@ -299,7 +299,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                     else {
                         bool showFileName = (count_file == 2 && !flags.noFileName);
                         if (flags.lineMatch) {
-                            if (count_file == 2 && !(flags.noFileName)) {
+                            if (showFileName) {
                                 printf("%s:%i:%s", filename, count, line);
                             }
                             else {
@@ -307,7 +307,7 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
                             }
                         }
                         else {
-                            if (count_file == 2 && !(flags.noFileName)) {
+                            if (showFileName) {
                                 printf("%s:%s", filename, line);
                             }
                             else {
