@@ -165,7 +165,6 @@ void GrepReadPrintFile(FILE *file, Flags flags, regex_t *preg, int count_file, c
     int count = 0;
     while (getline(&line, &length, file) > 0) {
         ++count;
-        bool lineMatch = false;
         if (flags.invert) {
             if (regexec(preg, line, 1, &match, 0)) {
                 if (flags.outputFullMatch) {
