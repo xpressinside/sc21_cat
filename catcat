@@ -23,7 +23,7 @@ typedef struct {
 }Flags;
 
 Flags CatReadFlags(int argc, char *argv[]);
-void CatReadPrintFile(FILE *file, Flags flags, int *linenumber, int last, bool *lastLine);
+void CatReadPrintFile(FILE *file, Flags flags, int *linenumber, bool *firstLine);
 void CatOpenFile(int argc, char *argv[], Flags flags);
 
 int main(int argc, char *argv[]) {
@@ -91,13 +91,12 @@ Flags CatReadFlags(int argc, char *argv[]) {
 }
 
 // chitaem otriki fail i vivdoim soderzhimoe soglasno flagam
-void CatReadPrintFile(FILE *file, Flags flags, int *linenumber, int last, bool *lastLine) {
+void CatReadPrintFile(FILE *file, Flags flags, int *linenumber, bool *firstLine) {
     (void)flags;
     int c = 0;
-    //int last = '\n';
+    int last = '\n';
     bool squeeze = false;
-    //last = '\n';
-
+    //last = '\n';    
     while (fread(&c, 1, 1, file) > 0) {        
         if (last == '\n') {
             if (flags.squeeze && c == '\n') {
@@ -113,10 +112,12 @@ void CatReadPrintFile(FILE *file, Flags flags, int *linenumber, int last, bool *
                     printf("%6i\t", ++*linenumber);                
                 }
             } else if (flags.numberAll) {
-                    printf("%6i\t", ++*linenumber);
+                    if (*firstLine) {
+                        *firstLine = false;
+                    } else {
+                        printf("%6i\t", ++*linenumber);
+                    }
                 }
-            
-            
         }
 
         if (flags.markEndl && c == '\n') {
@@ -154,13 +155,12 @@ void CatReadPrintFile(FILE *file, Flags flags, int *linenumber, int last, bool *
         }
         last = c;
     }
-    *lastLine = true;
+    *firstLine = true;
 }
 // otkrivaem fail
 void CatOpenFile(int argc, char *argv[], Flags flags) {
-    int last = '\n';
     int linenumber = 0;
-    bool lastLine = false;
+    bool fileEnd = false;
     for (int i = optind; i < argc; i++) {
             
             char *filename = argv[i];
@@ -170,7 +170,7 @@ void CatOpenFile(int argc, char *argv[], Flags flags) {
                 continue;
             }
             
-            CatReadPrintFile(file, flags, &linenumber, last, &lastLine);
+            CatReadPrintFile(file, flags, &linenumber, &fileEnd);
             
             fclose(file);
         }
