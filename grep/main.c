@@ -199,60 +199,23 @@ void GrepReadPrintFileWithPatterns(FILE *file, Flags flags, regex_t *preg, int c
         for (int i = 0; i < totalPatterns; ++i) {
             regmatch_t match;
             if (flags.invert) {
-                if (regexec(&preg[i], line, 1, &match, 0)) {
-                    if (flags.outputFullMatch) {
-                        ;
-                    }
-                    else {
-                        if (flags.matchNames) {
-                            if (namePrinted) 
-                                continue;
-                            printf("%s\n", filename);
-                            namePrinted = true;
-                        }
-                        else {
-                            bool showFileName = (count_file == 2 && !(flags.noFileName));
-                            PrintIf(flags, showFileName, filename, count, line);
-                        }                    
-                    }
-                }
-                else {
-                    if (!regexec(&preg[i], line, 1, &match, 0)) {
-                        if (flags.outputFullMatch) {
-                            if (flags.matchNames) {
-                                if (!namePrinted) {
-                                    printf("%s\n", filename);
-                                    namePrinted = true;
-                                } else {
-                                    continue;
-                                }
-                            }
-                            else {
-                                int len = match.rm_eo - match.rm_so;
-                                bool showFileName = (count_file == 2 && !(flags.noFileName));
-                                PrintIfMatch(flags, showFileName, filename, count, line, len, match);
-                                char *remain = line + match.rm_eo;
-                                while (!regexec(preg, remain, 1, &match, 0)) {
-                                    PrintIfMatch(flags, showFileName, filename, count, remain, len, match);
-                                    remain = remain + match.rm_eo;
-                                }
-                            }
-                        }
-                        else {
-                            if (flags.matchNames) 
-                                if (!namePrinted) {
-                                    printf("%s\n", filename);
-                                    namePrinted = true;
-                                } else 
-                                    continue;
-                            else {
-                                bool showFileName = (count_file == 2 && !flags.noFileName);
-                                PrintIf(flags, showFileName, filename, count, line);
-                            }
-                        }                 
-                    }
+                if (regexec(&preg[i], line, 1, &match, 0)) 
+                    lineMatch = true;
+            }
+            else {
+                if (!regexec(&preg[i], line, 1, &match, 0)) {
+                    lineMatch = true;
+                    break;
                 }
             }
+        }
+        if (lineMatch || flags.invert) {
+            if (flags.matchNames && !namePrinted) {
+                printf("%s\n", filename);
+                namePrinted = true;
+            }
+            bool showFileName = (count_file == 2 && !(flags.noFileName));
+            PrintIf(flags, showFileName, filename, count, line);
         }
     }
     // for (int j = 0; j < totalPatterns; j++) {
